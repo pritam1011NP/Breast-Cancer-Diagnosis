@@ -1,0 +1,259 @@
+---
+title: "R-Project.Rmd"
+author: "Pritam Majumder"
+date: "2024-03-30"
+output: html_document
+---
+
+## 1.load the "Breast cancer" Data set and Explore first few rows and summery statistics of the dataset.
+
+```{r}
+url <-"https://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/wdbc.data"
+breast_cancer <- read.csv(url, header = FALSE)
+head(breast_cancer)
+summary(breast_cancer)
+```
+
+## 2.Data cleaning: check for missing values
+
+```{r}
+missing_values <- colSums(is.na(breast_cancer))
+print(missing_values) 
+```
+
+## 3.Exploratory Data Analysis
+
+```{r}
+
+#relationships between these features(Radius,texture,smoothness).
+##Box plots 
+boxplot(V3 ~ V2, data = breast_cancer, 
+        main = "Box Plot of Radius Mean for Malignant and Benign Tumors",
+        xlab = "Diagnosis", ylab = "Radius Mean", col = c("red", "blue"))
+par(mfrow = c(1, 2))
+
+#Histogram of Texture Mean for Malignant Tumors.
+hist(subset(breast_cancer$V4, breast_cancer$V2 == "M"), 
+         main = "Histogram of Texture Mean for Malignant Tumors", xlab = "Texture Mean", ylab = "Frequency", col = "red")
+
+#Histogram of Texture Mean for Benign Tumors.
+hist(subset(breast_cancer$V4, breast_cancer$V2 == "B"), 
+     main = "Histogram of Texture Mean for Benign Tumors", xlab = "Texture Mean", ylab = "Frequency", col = "blue")
+par(mfrow = c(1, 2))
+
+#Histogram of Smoothness Mean for Malignant Tumors.
+
+hist(subset(breast_cancer$V5, breast_cancer$V2 == "M"), 
+     main = "Histogram of Smoothness Mean for Malignant Tumors", xlab = "Smoothness Mean", ylab= "Frequency", col = "red")
+
+#Histogram of Smoothness Mean for Benign Tumors.
+
+hist(subset(breast_cancer$V5, breast_cancer$V2 == "B"), 
+     main = "Histogram of Smoothness Mean for Benign Tumors", xlab = "Smoothness Mean", ylab = "Frequency", col = "blue")
+
+
+
+#Scatter Plots.
+
+plot(breast_cancer$V3, breast_cancer$V4, xlab = "Radius Mean", ylab ="TextureMean",    main="Scatter Plot of Radius Mean vs Texture Mean")
+
+```
+
+
+## 4.Correlation Analysis and correlation matrix.
+
+```{r}
+correlation_matrix <- cor(breast_cancer[, 3:5])  # Considering features V3 (radius_mean), V4 (texture_mean), V5 (smoothness_mean)
+print(correlation_matrix)
+```
+
+# Calculate correlation matrix
+
+```{r}
+
+relevant_features <- breast_cancer[, c("V3", "V4", "V5")]
+correlation_matrix <- cor(relevant_features)
+print(correlation_matrix)
+```
+
+# Visulize the  Correlation matrix
+
+```{r}
+heatmap(correlation_matrix,
+        col = colorRampPalette(c("blue", "white", "red"))(100),
+        symm = TRUE,
+        margins = c(7,7))
+```
+
+## 5.Malignant vs Benign Analysis Explore differences in feature distributions between malignant and benign tumors.
+
+```{r}
+boxplot(V3 ~ V2, data = breast_cancer, 
+        main = "Distribution of Radius Mean by Tumor Type",
+        xlab = "Diagnosis", ylab = "Radius Mean", col = c("red", "blue"))
+```
+
+## Box plot for texture_mean
+
+```{r}
+
+boxplot(V4 ~ V2, data = breast_cancer, 
+        main = "Distribution of Texture Mean by Tumor Type",
+        xlab = "Diagnosis", ylab = "Texture Mean", col = c("red", "blue"))
+```
+
+## Box plot for smoothness_mean
+```{r}
+boxplot(V5 ~ V2, data = breast_cancer, 
+        main = "Distribution of Smoothness Mean by Tumor Type",
+        xlab = "Diagnosis", ylab = "Smoothness Mean", col = c("red", "blue"))
+```
+
+## 6.Identify features that show significant variations.
+# Perform t-tests for each feature
+
+```{r}
+
+# Perform t-tests for each feature
+t_test_radius <- t.test(V3 ~ V2, data = breast_cancer)
+t_test_texture <- t.test(V4 ~ V2, data = breast_cancer)
+t_test_smoothness <- t.test(V5 ~ V2, data = breast_cancer)
+
+```
+
+## Print t-test results
+
+```{r}
+
+print("T-Test Results for Radius Mean:")
+print(t_test_radius)
+print("")
+print("T-Test Results for Texture Mean:")
+print(t_test_texture)
+print("")
+print("T-Test Results for Smoothness Mean:")
+print(t_test_smoothness)
+
+```
+
+## Conduct two-sample t-tests to compare the means of different features between malignant and benign tumors.
+
+```{r}
+
+t_test_results <- lapply(breast_cancer[, c("V3", "V4", "V5")], function(feature) {
+t.test(feature ~ V2, data = breast_cancer)
+})
+
+```
+
+## Print t-test results
+
+```{r}
+for (i in 1:length(t_test_results)) {
+  feature_name <- names(breast_cancer)[i + 2]  # Adjust for column index and exclude ID and Diagnosis columns
+  print(paste("T-Test Results for", feature_name, ":"))
+  print(t_test_results[[i]])
+  cat("\n")
+}
+
+```
+
+## 7.Perform PCA on relevant features
+
+```{r}
+
+relevant_features <- breast_cancer[, c("V3", "V4", "V5")]  # Subset relevant features
+pca_result <- prcomp(relevant_features, scale. = TRUE)  # Perform PCA with scaling
+
+```
+## Summary of PCA
+
+```{r}
+
+summary(pca_result)
+
+```
+## Scatter plot
+```{r}
+plot(pca_result, type = "l", main = "Scatter Plot for PCA")
+```
+
+# Scatter Plot based on benign and malignant tumours.
+```{r}
+plot(pca_result$x[,1], pca_result$x[,2], 
+     col = as.factor(breast_cancer$V2),
+     xlab = "PC1", ylab = "PC2",
+     main = "Scatter Plot of PC1 vs PC2 with Diagnosis Colors")
+legend("topright", legend = levels(as.factor(breast_cancer$V2)), col = 1:2, pch = 1)
+```
+
+## 9.Regression Model.
+```{r}
+# Build logistic regression model
+breast_cancer$V2<- as.factor(breast_cancer$V2)
+breast_cancer[, 3:ncol(breast_cancer)] <- sapply(breast_cancer[, 3:ncol(breast_cancer)], as.numeric)
+str(breast_cancer)
+logistic_model <- glm(V2 ~ V3 + V4 + V5, 
+                      data = breast_cancer, 
+                      family = binomial(link = "logit"))
+summary(logistic_model)
+
+```
+
+ Summary of the logistic regression model
+
+```{r}
+
+summary(logistic_model)
+```
+
+```{r}
+
+
+
+
+## Calculate predicted probabilities
+
+predicted_probabilities <- predict(logistic_model, newdata = breast_cancer, type = "response")
+
+
+
+logistic_model <- glm(V2 ~ V3 + V4 + V5, 
+                      data = breast_cancer, 
+                      family = binomial(link = "logit"))
+summary(logistic_model)
+predicted_diagnosis <- predict(logistic_model, newdata = breast_cancer, type = "response")
+predicted_probabilities <- predict(logistic_model, newdata = breast_cancer, type = "response")
+predicted_classes <- ifelse(predicted_probabilities > 0.5, 1, 0)
+conf_matrix <- table(breast_cancer$V2, predicted_classes)
+print(conf_matrix)
+accuracy <- sum(diag(conf_matrix)) / sum(conf_matrix)
+print(paste("Accuracy:", accuracy))
+
+# Precision
+precision <- conf_matrix[2, 2] / sum(predicted_classes)
+print(paste("Precision:", precision))
+# Recall (Sensitivity)
+recall <- conf_matrix[2, 2] / sum(breast_cancer$V2 == 1)
+print(paste("Recall (Sensitivity):", recall))
+
+# Specificity
+specificity <- conf_matrix[1, 1] / sum(breast_cancer$V2 == 0)
+print(paste("Specificity:", specificity))
+
+# F1-score
+f1_score <- 2 * precision * recall / (precision + recall)
+print(paste("F1-score:", f1_score))
+
+# ROC curve and AUC
+library(pROC)
+roc_curve <- roc(breast_cancer$V2, predicted_probabilities)
+auc <- auc(roc_curve)
+print(paste("AUC:", auc))
+plot(roc_curve)
+
+print(conf_matrix)
+
+
+
+```
